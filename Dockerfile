@@ -1,21 +1,26 @@
-FROM ghcr.io/linuxserver/baseimage-rdesktop-web:3.16
+FROM ghcr.io/linuxserver/baseimage-rdesktop-web:3.17
 
 # set version label
 ARG BUILD_DATE
 ARG VERSION
-ARG FIREFOX_VERSION
+ARG SIGNAL_VERSION
 LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="thelamer"
 
 RUN \
   echo "**** install packages ****" && \
-  if [ -z ${FIREFOX_VERSION+x} ]; then \
-    FIREFOX_VERSION=$(curl -sL "http://dl-cdn.alpinelinux.org/alpine/v3.16/community/x86_64/APKINDEX.tar.gz" | tar -xz -C /tmp \
-    && awk '/^P:firefox$/,/V:/' /tmp/APKINDEX | sed -n 2p | sed 's/^V://'); \
+  echo "http://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories && \
+  echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
+  echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
+  apk update && \
+  if [ -z ${SIGNAL_VERSION+x} ]; then \
+    SIGNAL_VERSION=$(curl -sL "http://dl-cdn.alpinelinux.org/alpine/edge/testing/x86_64/APKINDEX.tar.gz" | tar -xz -C /tmp \
+    && awk '/^P:signal-desktop$/,/V:/' /tmp/APKINDEX | sed -n 2p | sed 's/^V://'); \
   fi && \
-  apk add --no-cache \
-    firefox==${FIREFOX_VERSION} && \
-  sed -i 's|</applications>|  <application title="Mozilla Firefox" type="normal">\n    <maximized>yes</maximized>\n  </application>\n</applications>|' /etc/xdg/openbox/rc.xml && \
+  apk add --force-overwrite --no-cache \
+    signal-desktop==${SIGNAL_VERSION} && \
+  echo "**** postprocessing ****" && \
+  sed -i 's|</applications>|  <application title="Signal Desktop" type="normal">\n    <maximized>yes</maximized>\n  </application>\n</applications>|' /etc/xdg/openbox/rc.xml && \
   echo "**** cleanup ****" && \
   rm -rf \
     /tmp/*
