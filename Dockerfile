@@ -1,4 +1,4 @@
-FROM ghcr.io/linuxserver/baseimage-rdesktop-web:3.17
+FROM ghcr.io/linuxserver/baseimage-kasmvnc:ubuntujammy
 
 # set version label
 ARG BUILD_DATE
@@ -9,20 +9,12 @@ LABEL maintainer="thelamer"
 
 RUN \
   echo "**** set repositories ****" && \
-  mkdir /etc/apk && \
-  echo "http://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories && \
-  echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-  echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
-  echo "**** update packages ****" && \
-  apk update && \
-  if [ -z ${SIGNAL_VERSION+x} ]; then \
-    SIGNAL_VERSION=$(curl -sL "http://dl-cdn.alpinelinux.org/alpine/edge/testing/x86_64/APKINDEX.tar.gz" | tar -xz -C /tmp \
-    && awk '/^P:signal-desktop$/,/V:/' /tmp/APKINDEX | sed -n 2p | sed 's/^V://'); \
-  fi && \
-  echo "**** install packages ****" && \
-  apk del "ffmpeg" && \
-  apk install --force-overwrite --no-cache \
-    signal-desktop==${SIGNAL_VERSION} && \
+  apt update && \
+  apt install -y wget && \
+  wget -O- https://updates.signal.org/desktop/apt/keys.asc | gpg --dearmor > signal-desktop-keyring.gpg && \
+  cat signal-desktop-keyring.gpg | sudo tee /usr/share/keyrings/signal-desktop-keyring.gpg > /dev/null && \
+  echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/signal-desktop-keyring.gpg] https://updates.signal.org/desktop/apt xenial main' | sudo tee /etc/apt/sources.list.d/signal-xenial.list && \
+  apt update && apt install -y  signal-desktop && \
   echo "**** postprocessing ****" && \
   sed -i 's|</applications>|  <application title="Signal Desktop" type="normal">\n    <maximized>yes</maximized>\n  </application>\n</applications>|' /etc/xdg/openbox/rc.xml && \
   echo "**** cleanup ****" && \
